@@ -92,13 +92,22 @@
 <body>
 <header>
   <h1>📝 剧情编辑器</h1>
-  <input id="title" placeholder="章节标题（如：第二章 · 池塘）">
+  <select id="projType" style="padding:8px;border:none;border-radius:6px;font-size:14px;background:#fff">
+    <option value="chapter">📖 章节</option>
+    <option value="extra">🎲 杂项</option>
+  </select>
+  <input id="title" placeholder="标题（章节名/杂项故事名）">
   <input id="chapterCode" placeholder="章节码（自动生成，可改）" style="max-width:200px" title="章节码：玩家在游戏里输入这个码就能提前解锁本章节，每个章节码不能重复">
   <button class="ghost" id="btnHelp">📖 教程</button>
   <button id="btnCopy">复制 JSON</button>
   <button id="btnExport">导出 JSON</button>
   <div class="hint">左侧建场景，右侧写对白/传配图/加音频/加选项，全部自动保存。写完点“复制 JSON”或“导出 JSON”保存剧本。把本页网址发给朋友，大家都能一起编。</div>
 </header>
+<div id="coverRow" style="display:none;background:#fff8e6;padding:10px 20px;font-size:13px;color:#5a4a28">
+  🎲 杂项项目：填标题 + 上传一张封面图（列表里显示用），然后照常建场景写剧情。
+  <input type="file" id="coverFile" accept="image/*" style="margin-left:10px">
+  <img id="coverPreview" style="height:46px;border-radius:6px;vertical-align:middle;margin-left:10px;display:none">
+</div>
 <div id="tutorial">
   <b>📖 使用教程（30 秒学会）</b><br>
   <b>1.</b> 建场景：左侧点“＋新建场景”，起名（图1、图2…）<br>
@@ -131,8 +140,10 @@
   var CODES_KEY = "naigua_editor_codes";   // 所有用过的章节码（防重复）
 
   var project = {
+    type: "chapter",
     title: "第一章 · 小卖部",
     code: "",
+    cover: "",
     scenes: {}
   };
   var sceneOrder = [];
@@ -195,6 +206,12 @@
         currentId = raw.current || sceneOrder[0];
         $("title").value = project.title || "";
         $("chapterCode").value = project.code || "";
+        if (project.type === "extra") {
+          $("projType").value = "extra";
+          $("coverRow").style.display = "block";
+          $("chapterCode").style.display = "none";
+          if (project.cover) { $("coverPreview").src = project.cover; $("coverPreview").style.display = ""; }
+        }
       }
     } catch (e) {}
     if (!project.code) { project.code = genCode(); $("chapterCode").value = project.code; }
@@ -202,6 +219,48 @@
     renderList();
     if (currentId) renderEditor();
   }
+
+  // 类型切换：章节 ↔ 杂项
+  $("projType").addEventListener("change", function () {
+    project.type = this.value;
+    var isExtra = project.type === "extra";
+    $("coverRow").style.display = isExtra ? "block" : "none";
+    $("chapterCode").style.display = isExtra ? "none" : "";
+    if (isExtra && !project.cover) $("title").value = $("title").value || "我的杂项故事";
+    if (!isExtra && !project.cover) {}
+    scheduleSave();
+  });
+
+  // 杂项封面图上传
+  $("coverFile").addEventListener("change", function () {
+    var f = this.files[0];
+    this.value = "";
+    if (!f) return;
+    var rd = new FileReader();
+    rd.onload = function (ev) {
+      var img = new Image();
+      img.onload = function () {
+        var MAX = 500;
+        var scale = Math.min(1, MAX / img.width);
+        var c = document.createElement("canvas");
+        c.width = Math.round(img.width * scale);
+        c.height = Math.round(img.height * scale);
+        var ctx = c.getContext("2d");
+        ctx.drawImage(img, 0, 0, c.width, c.height);
+        var hasAlpha = false;
+        try {
+          var d = ctx.getImageData(0, 0, c.width, c.height).data;
+          for (var i = 3; i < d.length; i += 64) { if (d[i] < 250) { hasAlpha = true; break; } }
+        } catch (e) {}
+        project.cover = hasAlpha ? c.toDataURL("image/png") : c.toDataURL("image/jpeg", 0.72);
+        $("coverPreview").src = project.cover;
+        $("coverPreview").style.display = "";
+        scheduleSave();
+      };
+      img.src = ev.target.result;
+    };
+    rd.readAsDataURL(f);
+  });
 
   function addScene() {
     var id = newId();
@@ -471,7 +530,14 @@
   // 导出
   function buildJSON() {
     project.title = $("title").value || project.title;
-    var out = { title: project.title, code: project.code || genCode(), start: sceneOrder[0] || "", scenes: {} };
+    var out = {
+      type: project.type === "extra" ? "extra" : "chapter",
+      title: project.title,
+      start: sceneOrder[0] || "",
+      scenes: {}
+    };
+    if (out.type === "chapter") out.code = project.code || genCode();
+    if (out.type === "extra") out.cover = project.cover || "";
     sceneOrder.forEach(function (id) {
       var s = project.scenes[id];
       out.scenes[id] = {
