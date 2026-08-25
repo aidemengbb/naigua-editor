@@ -36,7 +36,6 @@
   .line select { width: 84px; padding: 7px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; }
   .line input.roleIn { width: 88px; padding: 7px 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; }
   .line input[type=text] { flex: 1; padding: 7px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; }
-  .line .voice { width: 150px; font-size: 12px; color: #666; }
   .line .del { color: #b0452e; cursor: pointer; font-weight: 700; padding: 0 6px; }
   .line .audioBtn { padding: 7px 10px; border: 1px solid #ccc; border-radius: 6px; background: #fff; cursor: pointer; font-size: 12px; white-space: nowrap; }
   .line .audioBtn.added { background: #e8f5e9; border-color: #3a7d44; color: #2e5c33; }
@@ -75,7 +74,6 @@
     .line select { width: 80px; padding: 9px; font-size: 15px; }
     .line input.roleIn { width: 84px; padding: 9px 8px; font-size: 15px; }
     .line input[type=text] { padding: 9px 10px; font-size: 15px; }
-    .line .voice { width: 100%; }
     .line .audioBtn { padding: 10px 14px; font-size: 14px; }
     .line .playBtn { padding: 10px 14px; font-size: 14px; }
     .line .del { padding: 0 12px; font-size: 18px; }
@@ -517,10 +515,6 @@
         var txt = document.createElement("input");
         txt.type = "text"; txt.value = ln.text; txt.placeholder = "台词或旁白内容";
         txt.addEventListener("input", function () { ln.text = this.value; scheduleSave(); });
-        var voice = document.createElement("input");
-        voice.type = "text"; voice.className = "voice"; voice.value = ln.voice || "";
-        voice.placeholder = "语音名（可空）";
-        voice.addEventListener("input", function () { ln.voice = this.value.trim(); scheduleSave(); });
         var up = document.createElement("button");
         up.className = "audioBtn" + (ln.audio ? " added" : "");
         up.textContent = ln.audio ? "🎤 已加" : "🎤 加音频";
@@ -535,7 +529,6 @@
             var rd = new FileReader();
             rd.onload = function (ev) {
               ln.audio = ev.target.result;
-              ln.voice = ln.voice || f.name.replace(/\.(mp3|m4a|wav|aac)$/i, "");
               renderLines(); scheduleSave();
             };
             rd.readAsDataURL(f);
@@ -559,7 +552,6 @@
               var rd = new FileReader();
               rd.onload = function (ev) {
                 ln.audio = ev.target.result;
-                ln.voice = ln.voice || f.name.replace(/\.[^.]+$/, "");
                 vt.textContent = "🎬 视频转音频";
                 vt.disabled = false;
                 renderLines(); scheduleSave();
@@ -587,13 +579,13 @@
         fade.appendChild(cb); fade.appendChild(document.createTextNode("黑屏"));
         var del = document.createElement("span"); del.className = "del"; del.textContent = "✕";
         del.addEventListener("click", function () { s.lines.splice(i, 1); renderLines(); scheduleSave(); });
-        row.appendChild(sel); row.appendChild(txt); row.appendChild(voice); row.appendChild(up); row.appendChild(play); row.appendChild(fade); row.appendChild(del);
+        row.appendChild(sel); row.appendChild(txt); row.appendChild(up); row.appendChild(play); row.appendChild(fade); row.appendChild(del);
         linesBox.appendChild(row);
       });
     }
     renderLines();
     $("addLine").addEventListener("click", function () {
-      s.lines.push({ role: "旁白", text: "", voice: "", audio: "", fade: false });
+      s.lines.push({ role: "旁白", text: "", audio: "", fade: false });
       renderLines(); scheduleSave();
     });
 
@@ -666,7 +658,7 @@
       out.scenes[id] = {
         name: s.name || "",
         image: s.imageData || (s.imageName ? s.imageName : ""),
-        lines: s.lines.map(function (l) { return { role: l.role, text: l.text, voice: l.voice || "", audio: l.audio || "", fade: !!l.fade }; }),
+        lines: s.lines.map(function (l) { return { role: l.role, text: l.text, audio: l.audio || "", fade: !!l.fade }; }),
         choices: s.choices.map(function (c) { return { text: c.text, goto: c.goto }; }),
         end: s.end || "",
         next: s.next || ""
