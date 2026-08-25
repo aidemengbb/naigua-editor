@@ -59,7 +59,6 @@
     header h1 { font-size: 15px; }
     header input { min-width: 0; padding: 10px 12px; font-size: 16px; }
     header button { padding: 11px 20px; font-size: 15px; }
-    #segSize { width: 90px; padding: 10px 8px; font-size: 15px; }
     header .hint { font-size: 11px; line-height: 1.6; }
     main { flex-direction: column; height: auto; min-height: calc(100vh - 120px); }
     #sceneList { width: 100%; display: flex; overflow-x: auto; padding: 8px; gap: 8px; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
@@ -98,10 +97,8 @@
   <input id="title" placeholder="标题（章节名/杂项故事名）">
   <input id="chapterCode" placeholder="章节码（自动生成，可改）" style="max-width:200px" title="章节码：玩家在游戏里输入这个码就能提前解锁本章节，每个章节码不能重复">
   <button class="ghost" id="btnHelp">📖 教程</button>
-  <input id="segSize" type="number" min="100" max="1000000" value="5000" style="width:100px" title="每段最多多少字符（按你粘贴的平台限制设，比如微信提示消息过长就调小）">
-  <button id="btnCopy">复制 JSON</button>
   <button id="btnExport">导出 JSON</button>
-  <div class="hint">左侧建场景，右侧写对白/传配图/加音频/加选项，全部自动保存。写完点“复制 JSON”或“导出 JSON”保存剧本。把本页网址发给朋友，大家都能一起编。</div>
+  <div class="hint">左侧建场景，右侧写对白/传配图/加音频/加选项，全部自动保存。写完点“导出 JSON”下载保存剧本。把本页网址发给朋友，大家都能一起编。</div>
 </header>
 <div id="coverRow" style="display:none;background:#fff8e6;padding:10px 20px;font-size:13px;color:#5a4a28">
   🎲 杂项项目：填标题 + 上传一张封面图（列表里显示用），然后照常建场景写剧情。
@@ -123,7 +120,7 @@
   <b>6.</b> 跳转：没有选项的幕，用“跳转到”指定播完去哪（做分支汇合用）<br>
   <b>7.</b> 结局：分支终点填结局名（如：帮忙·完）<br>
   <b>8.</b> 黑屏过渡：对白行勾“黑屏”，切换场景时先黑一下<br>
-  <b>9.</b> 导出：写完点“复制 JSON”（保存到剪贴板）或“导出 JSON”（下载文件）<br>
+  <b>9.</b> 导出：写完点“导出 JSON”下载文件保存剧本<br>
   <b>10.</b> 自动保存：写的每个字都存在你手机/电脑的浏览器里，关掉再开还在<br>
   <b>11.</b> 章节码：顶部“章节码”是本章的解锁码（自动生成、可改成好记的），玩家在游戏里输这个码就能提前解锁本章。每个章节码不能重复，重复了会提示你换一个<br>
   <span class="tip">💡 分享：把本页网址发给朋友，大家各自编各自的剧本，互不干扰。</span>
@@ -678,52 +675,6 @@
     URL.revokeObjectURL(a.href);
   }
 
-  /* 复制文本（成功回调） */
-  function copyText(text, onSuccess) {
-    function fallback() {
-      var ta = document.createElement("textarea");
-      ta.value = text;
-      ta.style.cssText = "position:fixed;left:-9999px;top:0";
-      document.body.appendChild(ta);
-      ta.select();
-      try { document.execCommand("copy"); if (onSuccess) onSuccess(); }
-      catch (e) { showToast("复制失败，请用旁边的“导出 JSON”下载文件"); }
-      document.body.removeChild(ta);
-    }
-    if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(text).then(function () { if (onSuccess) onSuccess(); }, fallback);
-    } else {
-      fallback();
-    }
-  }
-
-  /* 复制 JSON：内容大时自动分段，一段一段复制 */
-  var segs = [], segIdx = 0;
-  function handleCopy() {
-    var text = buildJSON();
-    var segLen = parseInt($("segSize").value, 10) || 5000;   // 每段字符数（可按粘贴平台限制调整）
-    if (text.length > segLen) {
-      segs = []; segIdx = 0;
-      for (var i = 0; i < text.length; i += segLen) segs.push(text.slice(i, i + segLen));
-      copySeg();
-      return;
-    }
-    copyText(text, function () { showToast("✅ JSON 已复制"); });
-  }
-  function copySeg() {
-    if (segIdx >= segs.length) {
-      segs = [];
-      $("btnCopy").textContent = "复制 JSON";
-      showToast("✅ 全部复制完成");
-      return;
-    }
-    copyText(segs[segIdx], function () {
-      segIdx++;
-      $("btnCopy").textContent = segIdx < segs.length ? ("复制第 " + (segIdx + 1) + "/" + segs.length + " 段") : "复制 JSON";
-      showToast("已复制第 " + segIdx + "/" + segs.length + " 段");
-    });
-  }
-
   $("title").addEventListener("input", function () { project.title = this.value; scheduleSave(); });
   $("chapterCode").addEventListener("input", function () {
     var v = this.value.trim().toUpperCase();
@@ -738,8 +689,7 @@
     if (!this.value.trim()) { this.value = genCode(); project.code = this.value; scheduleSave(); }
   });
   $("btnExport").addEventListener("click", exportJSON);
-  $("btnCopy").addEventListener("click", handleCopy);
-  $("btnHelp").addEventListener("click", function () { $("tutorial").classList.toggle("show"); });
+    $("btnHelp").addEventListener("click", function () { $("tutorial").classList.toggle("show"); });
 
   load();
 })();
