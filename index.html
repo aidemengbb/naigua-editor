@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>奶蛙的牛奶糖 · 剧情编辑器</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: "PingFang SC", "Microsoft YaHei", sans-serif; background: #f3f1ec; color: #2c2a26; }
+  header { background: #2c3a4a; color: #fff; padding: 12px 18px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  header h1 { font-size: 17px; letter-spacing: 2px; }
+  header input { flex: 1; min-width: 160px; padding: 8px 12px; border: none; border-radius: 6px; font-size: 14px; }
+  header button { padding: 9px 18px; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; background: #f6c96b; color: #3a2a10; font-weight: 700; }
+  header button.ghost { background: rgba(255,255,255,.14); color: #fff; }
+  #tutorial { display: none; background: #fff8e6; border: 1px solid #e8d9a8; border-radius: 0 0 10px 10px; padding: 14px 20px; font-size: 13.5px; line-height: 2; color: #5a4a28; }
+  #tutorial.show { display: block; }
+  #tutorial b { color: #3a2a10; }
+  #tutorial .tip { color: #8a7a5c; font-size: 12.5px; }
+  header .hint { font-size: 11px; color: #9fb2c5; width: 100%; }
+  main { display: flex; height: calc(100vh - 108px); }
+  #sceneList { width: 220px; background: #e8e4db; overflow-y: auto; padding: 10px; }
+  #sceneList .item { padding: 10px 12px; border-radius: 8px; cursor: pointer; margin-bottom: 6px; background: #faf8f2; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
+  #sceneList .item.active { background: #f6c96b; color: #3a2a10; }
+  #sceneList .item .del { color: #b0452e; font-weight: 700; padding: 0 4px; cursor: pointer; }
+  #sceneList .add { padding: 10px; border: 2px dashed #b8a888; border-radius: 8px; text-align: center; color: #8a7a5c; cursor: pointer; font-size: 14px; }
+  #editor { flex: 1; overflow-y: auto; padding: 18px 22px; background: #faf8f2; }
+  .sec { background: #fff; border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .sec h3 { font-size: 14px; color: #6b5d42; margin-bottom: 10px; border-left: 4px solid #f6c96b; padding-left: 8px; }
+  .imgbox { display: flex; gap: 14px; align-items: flex-start; }
+  .imgbox img { width: 140px; border-radius: 8px; border: 1px solid #ddd; }
+  .imgbox .ctrl { flex: 1; }
+  .imgbox label { display: block; font-size: 12px; color: #8a8a80; margin: 6px 0 4px; }
+  .imgbox input[type=text] { width: 100%; padding: 7px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; }
+  .imgbox button { margin-top: 8px; padding: 7px 14px; border: none; border-radius: 6px; background: #e8e4db; cursor: pointer; font-size: 13px; }
+  .line { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .line select { width: 84px; padding: 7px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; }
+  .line input.roleIn { width: 88px; padding: 7px 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; }
+  .line input[type=text] { flex: 1; padding: 7px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; }
+  .line .voice { width: 150px; font-size: 12px; color: #666; }
+  .line .del { color: #b0452e; cursor: pointer; font-weight: 700; padding: 0 6px; }
+  .line .audioBtn { padding: 7px 10px; border: 1px solid #ccc; border-radius: 6px; background: #fff; cursor: pointer; font-size: 12px; white-space: nowrap; }
+  .line .audioBtn.added { background: #e8f5e9; border-color: #3a7d44; color: #2e5c33; }
+  .line .playBtn { padding: 7px 11px; border: 1px solid #ccc; border-radius: 6px; background: #fff; cursor: pointer; font-size: 12px; }
+  .line .playBtn:disabled { opacity: .4; cursor: default; }
+  .line .fade { display: flex; align-items: center; font-size: 12px; color: #666; gap: 4px; white-space: nowrap; }
+  .addbtn { padding: 7px 14px; border: 1px dashed #b8a888; background: none; border-radius: 6px; color: #8a7a5c; cursor: pointer; font-size: 13px; }
+  .choice { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .choice input[type=text] { flex: 1; padding: 7px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; }
+  .choice select { padding: 7px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; }
+  .choice .del { color: #b0452e; cursor: pointer; font-weight: 700; padding: 0 6px; }
+  .endrow { display: flex; align-items: center; gap: 8px; }
+  .endrow input { padding: 7px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; width: 200px; }
+  .endrow span { font-size: 12px; color: #8a8a80; }
+  .saved { position: fixed; bottom: 16px; right: 16px; background: #3a7d44; color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 12px; opacity: 0; transition: opacity .4s; }
+  .saved.show { opacity: 1; }
+
+  /* 手机竖屏适配 */
+  @media (max-width: 768px) {
+    header { padding: 10px; gap: 8px; }
+    header h1 { font-size: 15px; }
+    header input { min-width: 0; padding: 10px 12px; font-size: 16px; }
+    header button { padding: 11px 20px; font-size: 15px; }
+    header .hint { font-size: 11px; line-height: 1.6; }
+    main { flex-direction: column; height: auto; min-height: calc(100vh - 120px); }
+    #sceneList { width: 100%; display: flex; overflow-x: auto; padding: 8px; gap: 8px; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+    #sceneList .item { flex: 0 0 auto; margin-bottom: 0; padding: 12px 14px; font-size: 15px; }
+    #sceneList .add { flex: 0 0 auto; padding: 12px 16px; white-space: nowrap; }
+    #editor { padding: 12px; }
+    .sec { padding: 12px; }
+    .imgbox { flex-direction: column; }
+    .imgbox img { width: 100%; max-height: 220px; object-fit: contain; }
+    .imgbox input[type=text] { font-size: 16px; padding: 10px; }
+    .imgbox button { padding: 10px 18px; font-size: 15px; }
+    .line { flex-wrap: wrap; gap: 6px; }
+    .line select { width: 80px; padding: 9px; font-size: 15px; }
+    .line input.roleIn { width: 84px; padding: 9px 8px; font-size: 15px; }
+    .line input[type=text] { padding: 9px 10px; font-size: 15px; }
+    .line .voice { width: 100%; }
+    .line .audioBtn { padding: 10px 14px; font-size: 14px; }
+    .line .playBtn { padding: 10px 14px; font-size: 14px; }
+    .line .del { padding: 0 12px; font-size: 18px; }
+    .addbtn { padding: 11px 16px; font-size: 15px; }
+    .choice { flex-wrap: wrap; }
+    .choice input[type=text] { flex: 1 1 100%; padding: 10px; font-size: 15px; }
+    .choice select { flex: 1; padding: 10px; font-size: 15px; }
+    .choice .del { padding: 0 12px; font-size: 18px; }
+    .endrow { flex-wrap: wrap; }
+    .endrow input { flex: 1 1 100%; padding: 10px; font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>📝 剧情编辑器</h1>
+  <input id="title" placeholder="章节标题（如：第二章 · 池塘）">
+  <button class="ghost" id="btnHelp">📖 教程</button>
+  <button id="btnCopy">复制 JSON</button>
+  <button id="btnExport">导出 JSON</button>
+  <div class="hint">左侧建场景，右侧写对白/传配图/加音频/加选项，全部自动保存。写完“复制 JSON”或“导出 JSON”，把内容发给 ZCode 即可接入游戏。把本页网址发给朋友，大家都能一起编。</div>
+</header>
+<div id="tutorial">
+  <b>📖 使用教程（30 秒学会）</b><br>
+  <b>1.</b> 建场景：左侧点“＋新建场景”，起名（图1、图2…）<br>
+  <b>2.</b> 配图：场景里“上传图片”（手机拍照/相册）或填已有文件名<br>
+  <b>3.</b> 写对白：点“＋添加对白”，角色可点选也可自己输入（奶蛙/牛来/老板/妈妈…），每行一句，从上到下播放<br>
+  <b>4.</b> 加音频：对白行点“🎤加音频”录音/选音频，自动挂上，可试听<br>
+  <b>5.</b> 选项：一幕结尾“＋添加选项”，写文字、选跳到哪个场景（这就是分支）<br>
+  <b>6.</b> 跳转：没有选项的幕，用“跳转到”指定播完去哪（做分支汇合用）<br>
+  <b>7.</b> 结局：分支终点填结局名（如：帮忙·完）<br>
+  <b>8.</b> 黑屏过渡：对白行勾“黑屏”，切换场景时先黑一下<br>
+  <b>9.</b> 导出：写完点“复制 JSON”（粘贴发给 ZCode）或“导出 JSON”（下载文件）<br>
+  <b>10.</b> 自动保存：写的每个字都存在你手机/电脑的浏览器里，关掉再开还在<br>
+  <span class="tip">💡 分享：把本页网址发给朋友，大家各自编各自的剧本，互不干扰。想接别人的剧本，让他把 JSON 发你，你发给我就行。</span>
+</div>
+<main>
+  <div id="sceneList"></div>
+  <div id="editor"></div>
+</main>
+<datalist id="roleList">
+  <option value="旁白"><option value="奶蛙"><option value="牛来"><option value="老板"><option value="妈妈"><option value="小牛">
+</datalist>
+<div id="saved" class="saved">已自动保存</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var LS_KEY = "naigua_editor_v1";
+  var ROLES = ["旁白", "奶蛙", "牛来", "老板", "妈妈", "小牛"];
+
+  var project = {
+    title: "第一章 · 小卖部",
+    scenes: {}
+  };
+  var sceneOrder = [];
+  var currentId = null;
+  var saveTimer = null;
+
+  function $(id) { return document.getElementById(id); }
+
+  function newId() {
+    var n = 1;
+    while (project.scenes["scene" + n]) n++;
+    return "scene" + n;
+  }
+
+  function sceneLabel(id) {
+    var s = project.scenes[id];
+    if (!s) return id;
+    var img = s.imageName || s.imageData ? "图" : "";
+    return s.name || (img ? "未命名场景" : "未命名场景");
+  }
+
+  function save() {
+    localStorage.setItem(LS_KEY, JSON.stringify({ project: project, order: sceneOrder, current: currentId }));
+    var el = $("saved");
+    el.classList.add("show");
+    setTimeout(function () { el.classList.remove("show"); }, 1200);
+  }
+  function scheduleSave() { clearTimeout(saveTimer); saveTimer = setTimeout(save, 400); }
+
+  function load() {
+    try {
+      var raw = JSON.parse(localStorage.getItem(LS_KEY) || "null");
+      if (raw && raw.project) {
+        project = raw.project;
+        sceneOrder = raw.order || Object.keys(project.scenes);
+        currentId = raw.current || sceneOrder[0];
+        $("title").value = project.title;
+      }
+    } catch (e) {}
+    if (!sceneOrder.length) addScene();
+    renderList();
+    if (currentId) renderEditor();
+  }
+
+  function addScene() {
+    var id = newId();
+    var n = sceneOrder.length + 1;
+    project.scenes[id] = { name: "图" + n, imageName: "", imageData: null, lines: [], choices: [], end: "", next: "" };
+    sceneOrder.push(id);
+    currentId = id;
+    renderList();
+    renderEditor();
+    save();
+  }
+
+  function removeScene(id) {
+    if (!confirm("删除这个场景？里面的对白和选项都会没。" )) return;
+    delete project.scenes[id];
+    sceneOrder = sceneOrder.filter(function (x) { return x !== id; });
+    if (currentId === id) currentId = sceneOrder[sceneOrder.length - 1] || null;
+    // 清掉指向它的选项和跳转
+    sceneOrder.forEach(function (sid) {
+      project.scenes[sid].choices = project.scenes[sid].choices.filter(function (c) { return c.goto !== id; });
+      if (project.scenes[sid].next === id) project.scenes[sid].next = "";
+    });
+    renderList();
+    renderEditor();
+    save();
+  }
+
+  function renderList() {
+    var box = $("sceneList");
+    box.innerHTML = "";
+    sceneOrder.forEach(function (id) {
+      var s = project.scenes[id];
+      var d = document.createElement("div");
+      d.className = "item" + (id === currentId ? " active" : "");
+      var label = document.createElement("span");
+      label.textContent = s.name || "未命名";
+      var del = document.createElement("span");
+      del.className = "del";
+      del.textContent = "✕";
+      del.addEventListener("click", function (e) { e.stopPropagation(); removeScene(id); });
+      d.appendChild(label);
+      d.appendChild(del);
+      d.addEventListener("click", function () { currentId = id; renderList(); renderEditor(); save(); });
+      box.appendChild(d);
+    });
+    var add = document.createElement("div");
+    add.className = "add";
+    add.textContent = "＋ 新建场景";
+    add.addEventListener("click", addScene);
+    box.appendChild(add);
+  }
+
+  function renderEditor() {
+    var s = project.scenes[currentId];
+    if (!s) return;
+    var e = $("editor");
+    e.innerHTML = "";
+
+    // 场景名
+    var sec1 = document.createElement("div"); sec1.className = "sec";
+    sec1.innerHTML = '<h3>场景设置</h3><div class="endrow"><input id="scName" placeholder="场景名（如：图1）" style="width:200px"><span>建议用 图1、图2… 方便跳转时认</span></div>';
+    e.appendChild(sec1);
+
+    // 配图
+    var sec2 = document.createElement("div"); sec2.className = "sec";
+    sec2.innerHTML = '<h3>配图</h3><div class="imgbox"><img id="preview" alt=""><div class="ctrl">' +
+      '<label>上传图片（自动压缩，手机拍的也行）</label><input type="file" id="imgFile" accept="image/*">' +
+      '<label>或填已有文件名（assets/cg/ 里的，如 store1）</label><input type="text" id="imgName" placeholder="留空则用上传的图">' +
+      '<button id="imgClear">清除图片</button></div></div>';
+    e.appendChild(sec2);
+
+    // 对白
+    var sec3 = document.createElement("div"); sec3.className = "sec";
+    sec3.innerHTML = '<h3>对白（每行一句，从上到下播放）</h3><div id="lines"></div><button class="addbtn" id="addLine">＋ 添加对白</button>';
+    e.appendChild(sec3);
+
+    // 选项
+    var sec4 = document.createElement("div"); sec4.className = "sec";
+    sec4.innerHTML = '<h3>选项（显示在这一幕最后，玩家点完跳走）</h3><div id="choices"></div><button class="addbtn" id="addChoice">＋ 添加选项</button>';
+    e.appendChild(sec4);
+
+    // 结局
+    var sec5 = document.createElement("div"); sec5.className = "sec";
+    sec5.innerHTML = '<h3>结局（这一幕是某个分支的结尾才填）</h3><div class="endrow"><input id="endName" placeholder="结局名（如：帮忙·完）"><span>留空表示不是结局</span></div>';
+    e.appendChild(sec5);
+
+    // 跳转
+    var sec6 = document.createElement("div"); sec6.className = "sec";
+    sec6.innerHTML = '<h3>跳转到（这一幕播完直接去下一幕，不弹选项）</h3><div class="endrow"><select id="nextSel" style="flex:1;padding:10px;font-size:15px;border:1px solid #ccc;border-radius:6px"></select><span>选章节汇合点用这个；有选项或结局的不用管它</span></div>';
+    e.appendChild(sec6);
+
+    // ---- 绑定 ----
+    $("scName").value = s.name || "";
+    $("scName").addEventListener("input", function () { s.name = this.value; renderList(); scheduleSave(); });
+
+    var preview = $("preview");
+    if (s.imageData) preview.src = s.imageData;
+    else if (s.imageName) preview.src = "assets/cg/" + s.imageName + ".png";
+    else preview.style.display = "none";
+    preview.style.display = s.imageData || s.imageName ? "" : "none";
+    if (s.imageData || s.imageName) {
+      preview.onerror = function () { preview.style.display = "none"; };
+    }
+
+    $("imgName").value = s.imageName || "";
+    $("imgName").addEventListener("input", function () {
+      s.imageName = this.value.trim(); s.imageData = null;
+      if (s.imageName) { preview.src = "assets/cg/" + s.imageName + ".png"; preview.style.display = ""; }
+      scheduleSave();
+    });
+
+    $("imgFile").addEventListener("change", function () {
+      var f = this.files[0];
+      if (!f) return;
+      var reader = new FileReader();
+      reader.onload = function (ev) {
+        var img = new Image();
+        img.onload = function () {
+          var MAX = 760;
+          var scale = Math.min(1, MAX / img.width);
+          var c = document.createElement("canvas");
+          c.width = Math.round(img.width * scale);
+          c.height = Math.round(img.height * scale);
+          c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+          s.imageData = c.toDataURL("image/jpeg", 0.72);
+          s.imageName = "";
+          preview.src = s.imageData;
+          preview.style.display = "";
+          scheduleSave();
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(f);
+    });
+
+    $("imgClear").addEventListener("click", function () {
+      s.imageData = null; s.imageName = "";
+      preview.style.display = "none";
+      $("imgName").value = "";
+      scheduleSave();
+    });
+
+    // 对白行
+    var linesBox = $("lines");
+    function renderLines() {
+      linesBox.innerHTML = "";
+      s.lines.forEach(function (ln, i) {
+        var row = document.createElement("div"); row.className = "line";
+        var sel = document.createElement("input");
+        sel.setAttribute("list", "roleList");
+        sel.className = "roleIn";
+        sel.value = ln.role;
+        sel.placeholder = "谁说的";
+        sel.addEventListener("input", function () { ln.role = this.value.trim() || "旁白"; scheduleSave(); });
+        var txt = document.createElement("input");
+        txt.type = "text"; txt.value = ln.text; txt.placeholder = "台词或旁白内容";
+        txt.addEventListener("input", function () { ln.text = this.value; scheduleSave(); });
+        var voice = document.createElement("input");
+        voice.type = "text"; voice.className = "voice"; voice.value = ln.voice || "";
+        voice.placeholder = "语音名（可空）";
+        voice.addEventListener("input", function () { ln.voice = this.value.trim(); scheduleSave(); });
+        var up = document.createElement("button");
+        up.className = "audioBtn" + (ln.audio ? " added" : "");
+        up.textContent = ln.audio ? "🎤 已加" : "🎤 加音频";
+        up.title = "上传录音（手机上会弹录音/选文件）";
+        up.addEventListener("click", function () {
+          var fi = document.createElement("input");
+          fi.type = "file"; fi.accept = "audio/*";
+          fi.addEventListener("change", function () {
+            var f = fi.files[0];
+            if (!f) return;
+            var rd = new FileReader();
+            rd.onload = function (ev) {
+              ln.audio = ev.target.result;
+              ln.voice = ln.voice || f.name.replace(/\.(mp3|m4a|wav|aac)$/i, "");
+              renderLines(); scheduleSave();
+            };
+            rd.readAsDataURL(f);
+          });
+          fi.click();
+        });
+        var play = document.createElement("button");
+        play.className = "playBtn";
+        play.textContent = "▶";
+        play.disabled = !ln.audio;
+        play.addEventListener("click", function () {
+          if (ln.audio) { var a = new Audio(ln.audio); a.play(); }
+        });
+        var fade = document.createElement("label"); fade.className = "fade";
+        var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = !!ln.fade;
+        cb.addEventListener("change", function () { ln.fade = cb.checked; scheduleSave(); });
+        fade.appendChild(cb); fade.appendChild(document.createTextNode("黑屏"));
+        var del = document.createElement("span"); del.className = "del"; del.textContent = "✕";
+        del.addEventListener("click", function () { s.lines.splice(i, 1); renderLines(); scheduleSave(); });
+        row.appendChild(sel); row.appendChild(txt); row.appendChild(voice); row.appendChild(up); row.appendChild(play); row.appendChild(fade); row.appendChild(del);
+        linesBox.appendChild(row);
+      });
+    }
+    renderLines();
+    $("addLine").addEventListener("click", function () {
+      s.lines.push({ role: "旁白", text: "", voice: "", audio: "", fade: false });
+      renderLines(); scheduleSave();
+    });
+
+    // 选项
+    var choicesBox = $("choices");
+    function renderChoices() {
+      choicesBox.innerHTML = "";
+      s.choices.forEach(function (c, i) {
+        var row = document.createElement("div"); row.className = "choice";
+        var txt = document.createElement("input");
+        txt.type = "text"; txt.value = c.text; txt.placeholder = "选项文字（如：去帮忙）";
+        txt.addEventListener("input", function () { c.text = this.value; scheduleSave(); });
+        var sel = document.createElement("select");
+        sceneOrder.forEach(function (sid) {
+          var o = document.createElement("option");
+          o.value = sid; o.textContent = project.scenes[sid].name || sid;
+          if (sid === c.goto) o.selected = true;
+          sel.appendChild(o);
+        });
+        sel.addEventListener("change", function () { c.goto = this.value; scheduleSave(); });
+        var del = document.createElement("span"); del.className = "del"; del.textContent = "✕";
+        del.addEventListener("click", function () { s.choices.splice(i, 1); renderChoices(); scheduleSave(); });
+        row.appendChild(txt); row.appendChild(sel); row.appendChild(del);
+        choicesBox.appendChild(row);
+      });
+    }
+    renderChoices();
+    $("addChoice").addEventListener("click", function () {
+      var target = sceneOrder.find(function (id) { return id !== currentId; }) || currentId;
+      s.choices.push({ text: "", goto: target });
+      renderChoices(); scheduleSave();
+    });
+
+    // 结局
+    $("endName").value = s.end || "";
+    $("endName").addEventListener("input", function () { s.end = this.value.trim(); scheduleSave(); });
+
+    // 跳转
+    var nextSel = $("nextSel");
+    var opt0 = document.createElement("option");
+    opt0.value = ""; opt0.textContent = "（不跳转 / 到此结束）";
+    if (!s.next) opt0.selected = true;
+    nextSel.appendChild(opt0);
+    sceneOrder.forEach(function (sid) {
+      if (sid === currentId) return;
+      var o = document.createElement("option");
+      o.value = sid; o.textContent = project.scenes[sid].name || sid;
+      if (sid === s.next) o.selected = true;
+      nextSel.appendChild(o);
+    });
+    nextSel.addEventListener("change", function () { s.next = this.value; scheduleSave(); });
+  }
+
+  // 导出
+  function buildJSON() {
+    project.title = $("title").value || project.title;
+    var out = { title: project.title, start: sceneOrder[0] || "", scenes: {} };
+    sceneOrder.forEach(function (id) {
+      var s = project.scenes[id];
+      out.scenes[id] = {
+        name: s.name || "",
+        image: s.imageData || (s.imageName ? s.imageName : ""),
+        lines: s.lines.map(function (l) { return { role: l.role, text: l.text, voice: l.voice || "", audio: l.audio || "", fade: !!l.fade }; }),
+        choices: s.choices.map(function (c) { return { text: c.text, goto: c.goto }; }),
+        end: s.end || "",
+        next: s.next || ""
+      };
+    });
+    return JSON.stringify(out, null, 2);
+  }
+
+  function exportJSON() {
+    var blob = new Blob([buildJSON()], { type: "application/json" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = (project.title || "剧情") + ".json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function copyJSON() {
+    var text = buildJSON();
+    function fallback() {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.cssText = "position:fixed;left:-9999px;top:0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); alert("✅ JSON 已复制，直接粘贴发给 ZCode 吧"); }
+      catch (e) { alert("复制失败，请用旁边的“导出 JSON”下载文件"); }
+      document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(function () {
+        alert("✅ JSON 已复制，直接粘贴发给 ZCode 吧");
+      }, fallback);
+    } else {
+      fallback();
+    }
+  }
+
+  $("title").addEventListener("input", function () { project.title = this.value; scheduleSave(); });
+  $("btnExport").addEventListener("click", exportJSON);
+  $("btnCopy").addEventListener("click", copyJSON);
+  $("btnHelp").addEventListener("click", function () { $("tutorial").classList.toggle("show"); });
+
+  load();
+})();
+</script>
+</body>
+</html>
