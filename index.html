@@ -676,25 +676,49 @@
     URL.revokeObjectURL(a.href);
   }
 
-  function copyJSON() {
-    var text = buildJSON();
+  /* 复制文本（成功回调） */
+  function copyText(text, onSuccess) {
     function fallback() {
       var ta = document.createElement("textarea");
       ta.value = text;
       ta.style.cssText = "position:fixed;left:-9999px;top:0";
       document.body.appendChild(ta);
       ta.select();
-      try { document.execCommand("copy"); showToast("✅ JSON 已复制"); }
+      try { document.execCommand("copy"); if (onSuccess) onSuccess(); }
       catch (e) { showToast("复制失败，请用旁边的“导出 JSON”下载文件"); }
       document.body.removeChild(ta);
     }
     if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(text).then(function () {
-        showToast("✅ JSON 已复制");
-      }, fallback);
+      navigator.clipboard.writeText(text).then(function () { if (onSuccess) onSuccess(); }, fallback);
     } else {
       fallback();
     }
+  }
+
+  /* 复制 JSON：内容大时自动分段，一段一段复制 */
+  var segs = [], segIdx = 0;
+  function handleCopy() {
+    var text = buildJSON();
+    if (text.length > 700000) {   // 超过约 700KB 自动分段
+      segs = []; segIdx = 0;
+      for (var i = 0; i < text.length; i += 700000) segs.push(text.slice(i, i + 700000));
+      copySeg();
+      return;
+    }
+    copyText(text, function () { showToast("✅ JSON 已复制"); });
+  }
+  function copySeg() {
+    if (segIdx >= segs.length) {
+      segs = [];
+      $("btnCopy").textContent = "复制 JSON";
+      showToast("✅ 全部复制完成");
+      return;
+    }
+    copyText(segs[segIdx], function () {
+      segIdx++;
+      $("btnCopy").textContent = segIdx < segs.length ? ("复制第 " + (segIdx + 1) + "/" + segs.length + " 段") : "复制 JSON";
+      showToast("已复制第 " + segIdx + "/" + segs.length + " 段，去粘贴，再回来点一下");
+    });
   }
 
   $("title").addEventListener("input", function () { project.title = this.value; scheduleSave(); });
@@ -711,7 +735,7 @@
     if (!this.value.trim()) { this.value = genCode(); project.code = this.value; scheduleSave(); }
   });
   $("btnExport").addEventListener("click", exportJSON);
-  $("btnCopy").addEventListener("click", copyJSON);
+  $("btnCopy").addEventListener("click", handleCopy);
   $("btnHelp").addEventListener("click", function () { $("tutorial").classList.toggle("show"); });
 
   load();
