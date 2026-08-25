@@ -720,7 +720,7 @@
     copyText(segs[segIdx], function () {
       segIdx++;
       $("btnCopy").textContent = segIdx < segs.length ? ("复制第 " + (segIdx + 1) + "/" + segs.length + " 段") : "复制 JSON";
-      showToast("已复制第 " + segIdx + "/" + segs.length + " 段，去粘贴，再回来点一下");
+      showToast("已复制第 " + segIdx + "/" + segs.length + " 段");
     });
   }
 
