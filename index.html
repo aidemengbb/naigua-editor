@@ -97,6 +97,7 @@
     <option value="extra">🎲 杂项</option>
   </select>
   <input id="title" placeholder="标题（章节名/杂项故事名）">
+  <input id="chapterNo" type="number" min="1" placeholder="章节编号" style="max-width:90px" title="第几章？填数字（如：2 = 第二章）。没填的话我会按标题里的“第X章”或你说明的顺序排">
   <input id="chapterCode" placeholder="章节码（自动生成，可改）" style="max-width:200px" title="章节码：玩家在游戏里输入这个码就能提前解锁本章节，每个章节码不能重复">
   <button class="ghost" id="btnHelp">📖 教程</button>
   <button id="btnCopy">复制 JSON</button>
@@ -147,6 +148,7 @@
   var project = {
     type: "chapter",
     title: "第一章 · 小卖部",
+    chapterNo: "",
     code: "",
     cover: "",
     wallpaper: "",
@@ -255,11 +257,13 @@
         sceneOrder = raw.order || Object.keys(project.scenes);
         currentId = raw.current || sceneOrder[0];
         $("title").value = project.title || "";
+        $("chapterNo").value = project.chapterNo || "";
         $("chapterCode").value = project.code || "";
         if (project.type === "extra") {
           $("projType").value = "extra";
           $("coverRow").style.display = "block";
           $("chapterCode").style.display = "none";
+          $("chapterNo").style.display = "none";
           if (project.cover) { $("coverPreview").src = project.cover; $("coverPreview").style.display = ""; }
         } else {
           $("wallRow").style.display = "block";
@@ -280,6 +284,7 @@
     $("coverRow").style.display = isExtra ? "block" : "none";
     $("wallRow").style.display = isExtra ? "none" : "block";
     $("chapterCode").style.display = isExtra ? "none" : "";
+    $("chapterNo").style.display = isExtra ? "none" : "";
     if (isExtra && !project.cover) $("title").value = $("title").value || "我的杂项故事";
     scheduleSave();
   });
@@ -658,6 +663,7 @@
     };
     if (out.type === "chapter") {
       out.code = project.code || genCode();
+      out.chapterNo = project.chapterNo || "";
       if (project.wallpaper) out.wallpaper = project.wallpaper;
     }
     if (out.type === "extra") out.cover = project.cover || "";
@@ -706,6 +712,11 @@
   }
 
   $("title").addEventListener("input", function () { project.title = this.value; scheduleSave(); });
+  $("chapterNo").addEventListener("input", function () {
+    var v = parseInt(this.value, 10);
+    project.chapterNo = (v > 0) ? v : "";
+    scheduleSave();
+  });
   $("chapterCode").addEventListener("input", function () {
     var v = this.value.trim().toUpperCase();
     if (v && v !== project.code && usedCodes().indexOf(v) >= 0) {
