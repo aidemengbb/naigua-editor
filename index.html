@@ -189,7 +189,51 @@
     el.textContent = msg;
     el.classList.add("show");
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { el.classList.remove("show"); }, 2200);
+    toastTimer = setTimeout(function () { el.classList.remove("show"); }, 2600);
+  }
+
+  /* 视频转音频：用浏览器录制视频里的声音（无需安装任何东西） */
+  function videoToAudio(videoFile) {
+    return new Promise(function (resolve, reject) {
+      if (!HTMLMediaElement.prototype.captureStream) {
+        reject(new Error("这个浏览器不支持，请用安卓Chrome/Edge"));
+        return;
+      }
+      var url = URL.createObjectURL(videoFile);
+      var video = document.createElement("video");
+      video.src = url;
+      video.muted = true;
+      video.playsInline = true;
+      var cleaned = false;
+      function cleanup() {
+        if (!cleaned) { cleaned = true; URL.revokeObjectURL(url); video.src = ""; }
+      }
+      video.onerror = function () { cleanup(); reject(new Error("视频打不开")); };
+      video.play().then(function () {
+        var stream;
+        try { stream = video.captureStream(); } catch (e) { cleanup(); reject(e); return; }
+        var tracks = stream.getAudioTracks();
+        if (!tracks.length) { cleanup(); reject(new Error("这个视频里没有声音")); return; }
+        var audioStream = new MediaStream(tracks);
+        var mime = "";
+        if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) mime = "audio/webm;codecs=opus";
+        else if (MediaRecorder.isTypeSupported("audio/mp4")) mime = "audio/mp4";
+        var rec;
+        try { rec = new MediaRecorder(audioStream, mime ? { mimeType: mime } : undefined); }
+        catch (e) { cleanup(); reject(e); return; }
+        var chunks = [];
+        rec.ondataavailable = function (ev) { if (ev.data && ev.data.size) chunks.push(ev.data); };
+        rec.onstop = function () {
+          cleanup();
+          resolve(new Blob(chunks, { type: mime || "audio/webm" }));
+        };
+        rec.onerror = function (e) { cleanup(); reject(e.error || new Error("录制失败")); };
+        var duration = (typeof video.duration === "number" && isFinite(video.duration)) ? video.duration * 1000 : 60000;
+        rec.start();
+        video.onended = function () { if (rec.state !== "inactive") rec.stop(); };
+        setTimeout(function () { if (rec.state !== "inactive") rec.stop(); }, duration + 1500);
+      }).catch(function () { cleanup(); reject(new Error("视频无法播放")); });
+    });
   }
 
   function save() {
@@ -495,6 +539,38 @@
               renderLines(); scheduleSave();
             };
             rd.readAsDataURL(f);
+          });
+          fi.click();
+        });
+        var vt = document.createElement("button");
+        vt.className = "audioBtn";
+        vt.textContent = "🎬 视频转音频";
+        vt.title = "选一个视频，自动抽出声音当配音";
+        vt.addEventListener("click", function () {
+          var fi = document.createElement("input");
+          fi.type = "file"; fi.accept = "video/*";
+          fi.addEventListener("change", function () {
+            var f = fi.files[0];
+            fi.value = "";
+            if (!f) return;
+            vt.textContent = "⏳ 转换中…";
+            vt.disabled = true;
+            videoToAudio(f).then(function (blob) {
+              var rd = new FileReader();
+              rd.onload = function (ev) {
+                ln.audio = ev.target.result;
+                ln.voice = ln.voice || f.name.replace(/\.[^.]+$/, "");
+                vt.textContent = "🎬 视频转音频";
+                vt.disabled = false;
+                renderLines(); scheduleSave();
+                showToast("✅ 视频音频已提取");
+              };
+              rd.readAsDataURL(blob);
+            }).catch(function (err) {
+              vt.textContent = "🎬 视频转音频";
+              vt.disabled = false;
+              showToast("❌ 转换失败：" + (err && err.message ? err.message : "浏览器不支持"));
+            });
           });
           fi.click();
         });
