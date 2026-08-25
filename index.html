@@ -353,7 +353,8 @@
     sceneOrder.forEach(function (x) { used[project.scenes[x].name] = true; });
     var n = 1;
     while (used["图" + n]) n++;
-    project.scenes[id] = { name: "图" + n, imageName: "", imageData: null, lines: [], choices: [], end: "", next: "" };
+    project.scenes[id] = { name: "图" + n, imageName: "", imageData: null,
+      lines: [{ role: "旁白", text: "", audio: "", fade: false }], choices: [], end: "", next: "" };
     sceneOrder.push(id);
     currentId = id;
     renderList();
@@ -422,7 +423,7 @@
 
     // 对白
     var sec3 = document.createElement("div"); sec3.className = "sec";
-    sec3.innerHTML = '<h3>对白（每行一句，从上到下播放）</h3><div id="lines"></div><button class="addbtn" id="addLine">＋ 添加对白</button>';
+    sec3.innerHTML = '<h3>对白（每行一句，从上到下播放。每行可挂 🎤音频 / 🎬视频转音频）</h3><div id="lines"></div><button class="addbtn" id="addLine">＋ 添加对白</button>';
     e.appendChild(sec3);
 
     // 选项
