@@ -108,6 +108,11 @@
   <input type="file" id="coverFile" accept="image/*" style="margin-left:10px">
   <img id="coverPreview" style="height:46px;border-radius:6px;vertical-align:middle;margin-left:10px;display:none">
 </div>
+<div id="wallRow" style="display:none;background:#eef7ee;padding:10px 20px;font-size:13px;color:#2e5c33">
+  🖼 章节项目（可选）：上传一张"通关解锁壁纸"——玩家打通本章后，主界面背景就可以选这张图了。不传 = 本章没有壁纸奖励。
+  <input type="file" id="wallFile" accept="image/*" style="margin-left:10px">
+  <img id="wallPreview" style="height:46px;border-radius:6px;vertical-align:middle;margin-left:10px;display:none">
+</div>
 <div id="tutorial">
   <b>📖 使用教程（30 秒学会）</b><br>
   <b>1.</b> 建场景：左侧点“＋新建场景”，起名（图1、图2…）<br>
@@ -144,6 +149,7 @@
     title: "第一章 · 小卖部",
     code: "",
     cover: "",
+    wallpaper: "",
     scenes: {}
   };
   var sceneOrder = [];
@@ -211,6 +217,9 @@
           $("coverRow").style.display = "block";
           $("chapterCode").style.display = "none";
           if (project.cover) { $("coverPreview").src = project.cover; $("coverPreview").style.display = ""; }
+        } else {
+          $("wallRow").style.display = "block";
+          if (project.wallpaper) { $("wallPreview").src = project.wallpaper; $("wallPreview").style.display = ""; }
         }
       }
     } catch (e) {}
@@ -225,11 +234,46 @@
     project.type = this.value;
     var isExtra = project.type === "extra";
     $("coverRow").style.display = isExtra ? "block" : "none";
+    $("wallRow").style.display = isExtra ? "none" : "block";
     $("chapterCode").style.display = isExtra ? "none" : "";
     if (isExtra && !project.cover) $("title").value = $("title").value || "我的杂项故事";
-    if (!isExtra && !project.cover) {}
     scheduleSave();
   });
+
+  // 壁纸上传（章节项目）
+  function attachUpload(btnId, fileId, previewId, onDone) {
+    $(btnId).addEventListener("change", function () {
+      var f = this.files[0];
+      this.value = "";
+      if (!f) return;
+      var rd = new FileReader();
+      rd.onload = function (ev) {
+        var img = new Image();
+        img.onload = function () {
+          var MAX = 500;
+          var scale = Math.min(1, MAX / img.width);
+          var c = document.createElement("canvas");
+          c.width = Math.round(img.width * scale);
+          c.height = Math.round(img.height * scale);
+          var ctx = c.getContext("2d");
+          ctx.drawImage(img, 0, 0, c.width, c.height);
+          var hasAlpha = false;
+          try {
+            var d = ctx.getImageData(0, 0, c.width, c.height).data;
+            for (var i = 3; i < d.length; i += 64) { if (d[i] < 250) { hasAlpha = true; break; } }
+          } catch (e) {}
+          var dataUrl = hasAlpha ? c.toDataURL("image/png") : c.toDataURL("image/jpeg", 0.72);
+          $(previewId).src = dataUrl;
+          $(previewId).style.display = "";
+          onDone(dataUrl);
+          scheduleSave();
+        };
+        img.src = ev.target.result;
+      };
+      rd.readAsDataURL(f);
+    });
+  }
+  attachUpload("wallFile", null, "wallPreview", function (dataUrl) { project.wallpaper = dataUrl; });
 
   // 杂项封面图上传
   $("coverFile").addEventListener("change", function () {
@@ -536,7 +580,10 @@
       start: sceneOrder[0] || "",
       scenes: {}
     };
-    if (out.type === "chapter") out.code = project.code || genCode();
+    if (out.type === "chapter") {
+      out.code = project.code || genCode();
+      if (project.wallpaper) out.wallpaper = project.wallpaper;
+    }
     if (out.type === "extra") out.cover = project.cover || "";
     sceneOrder.forEach(function (id) {
       var s = project.scenes[id];
