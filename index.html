@@ -579,7 +579,7 @@
         fade.appendChild(cb); fade.appendChild(document.createTextNode("黑屏"));
         var del = document.createElement("span"); del.className = "del"; del.textContent = "✕";
         del.addEventListener("click", function () { s.lines.splice(i, 1); renderLines(); scheduleSave(); });
-        row.appendChild(sel); row.appendChild(txt); row.appendChild(up); row.appendChild(play); row.appendChild(fade); row.appendChild(del);
+        row.appendChild(sel); row.appendChild(txt); row.appendChild(up); row.appendChild(vt); row.appendChild(play); row.appendChild(fade); row.appendChild(del);
         linesBox.appendChild(row);
       });
     }
