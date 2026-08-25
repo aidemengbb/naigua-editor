@@ -265,7 +265,7 @@
         }
       }
     } catch (e) {}
-    if (!project.code) { project.code = genCode(); $("chapterCode").value = project.code; }
+    if (!project.code) { project.code = genCode(); $("chapterCode").value = project.code; scheduleSave(); }
     if (!sceneOrder.length) addScene();
     renderList();
     if (currentId) renderEditor();
@@ -652,7 +652,12 @@
       scenes: {}
     };
     if (out.type === "chapter") {
-      out.code = project.code || genCode();
+      if (!project.code) {
+        project.code = genCode();
+        $("chapterCode").value = project.code;
+        scheduleSave();
+      }
+      out.code = project.code;
       if (project.wallpaper) out.wallpaper = project.wallpaper;
     }
     if (out.type === "extra") out.cover = project.cover || "";
