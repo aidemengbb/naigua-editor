@@ -93,6 +93,7 @@
 <header>
   <h1>📝 剧情编辑器</h1>
   <input id="title" placeholder="章节标题（如：第二章 · 池塘）">
+  <input id="chapterCode" placeholder="章节码（自动生成，可改）" style="max-width:200px" title="章节码：玩家在游戏里输入这个码就能提前解锁本章节，每个章节码不能重复">
   <button class="ghost" id="btnHelp">📖 教程</button>
   <button id="btnCopy">复制 JSON</button>
   <button id="btnExport">导出 JSON</button>
@@ -110,6 +111,7 @@
   <b>8.</b> 黑屏过渡：对白行勾“黑屏”，切换场景时先黑一下<br>
   <b>9.</b> 导出：写完点“复制 JSON”（保存到剪贴板）或“导出 JSON”（下载文件）<br>
   <b>10.</b> 自动保存：写的每个字都存在你手机/电脑的浏览器里，关掉再开还在<br>
+  <b>11.</b> 章节码：顶部“章节码”是本章的解锁码（自动生成、可改成好记的），玩家在游戏里输这个码就能提前解锁本章。每个章节码不能重复，重复了会提示你换一个<br>
   <span class="tip">💡 分享：把本页网址发给朋友，大家各自编各自的剧本，互不干扰。</span>
 </div>
 <main>
@@ -126,9 +128,11 @@
   "use strict";
 
   var LS_KEY = "naigua_editor_v1";
+  var CODES_KEY = "naigua_editor_codes";   // 所有用过的章节码（防重复）
 
   var project = {
     title: "第一章 · 小卖部",
+    code: "",
     scenes: {}
   };
   var sceneOrder = [];
@@ -137,6 +141,25 @@
   var toastTimer = null;
 
   function $(id) { return document.getElementById(id); }
+
+  function genCode() {
+    var chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+    var s = "";
+    for (var i = 0; i < 8; i++) s += chars[Math.floor(Math.random() * chars.length)];
+    return "NG-" + s.slice(0, 4) + "-" + s.slice(4);
+  }
+
+  function usedCodes() {
+    try { return JSON.parse(localStorage.getItem(CODES_KEY) || "[]"); }
+    catch (e) { return []; }
+  }
+  function rememberCode(code) {
+    if (!code) return;
+    try {
+      var arr = usedCodes();
+      if (arr.indexOf(code) < 0) { arr.push(code); localStorage.setItem(CODES_KEY, JSON.stringify(arr)); }
+    } catch (e) {}
+  }
 
   function newId() {
     var n = 1;
@@ -153,6 +176,7 @@
   }
 
   function save() {
+    rememberCode(project.code);
     try {
       localStorage.setItem(LS_KEY, JSON.stringify({ project: project, order: sceneOrder, current: currentId }));
       showToast("已自动保存");
@@ -170,8 +194,10 @@
         sceneOrder = raw.order || Object.keys(project.scenes);
         currentId = raw.current || sceneOrder[0];
         $("title").value = project.title || "";
+        $("chapterCode").value = project.code || "";
       }
     } catch (e) {}
+    if (!project.code) { project.code = genCode(); $("chapterCode").value = project.code; }
     if (!sceneOrder.length) addScene();
     renderList();
     if (currentId) renderEditor();
@@ -445,7 +471,7 @@
   // 导出
   function buildJSON() {
     project.title = $("title").value || project.title;
-    var out = { title: project.title, start: sceneOrder[0] || "", scenes: {} };
+    var out = { title: project.title, code: project.code || genCode(), start: sceneOrder[0] || "", scenes: {} };
     sceneOrder.forEach(function (id) {
       var s = project.scenes[id];
       out.scenes[id] = {
@@ -491,6 +517,18 @@
   }
 
   $("title").addEventListener("input", function () { project.title = this.value; scheduleSave(); });
+  $("chapterCode").addEventListener("input", function () {
+    var v = this.value.trim().toUpperCase();
+    if (v && v !== project.code && usedCodes().indexOf(v) >= 0) {
+      showToast("⚠️ 这个章节码已经用过了，换一个");
+      return;
+    }
+    project.code = v;
+    scheduleSave();
+  });
+  $("chapterCode").addEventListener("blur", function () {
+    if (!this.value.trim()) { this.value = genCode(); project.code = this.value; scheduleSave(); }
+  });
   $("btnExport").addEventListener("click", exportJSON);
   $("btnCopy").addEventListener("click", copyJSON);
   $("btnHelp").addEventListener("click", function () { $("tutorial").classList.toggle("show"); });
