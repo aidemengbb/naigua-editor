@@ -96,7 +96,7 @@
   <button class="ghost" id="btnHelp">📖 教程</button>
   <button id="btnCopy">复制 JSON</button>
   <button id="btnExport">导出 JSON</button>
-  <div class="hint">左侧建场景，右侧写对白/传配图/加音频/加选项，全部自动保存。写完“复制 JSON”或“导出 JSON”，把内容发给 ZCode 即可接入游戏。把本页网址发给朋友，大家都能一起编。</div>
+  <div class="hint">左侧建场景，右侧写对白/传配图/加音频/加选项，全部自动保存。写完点“复制 JSON”或“导出 JSON”保存剧本。把本页网址发给朋友，大家都能一起编。</div>
 </header>
 <div id="tutorial">
   <b>📖 使用教程（30 秒学会）</b><br>
@@ -108,9 +108,9 @@
   <b>6.</b> 跳转：没有选项的幕，用“跳转到”指定播完去哪（做分支汇合用）<br>
   <b>7.</b> 结局：分支终点填结局名（如：帮忙·完）<br>
   <b>8.</b> 黑屏过渡：对白行勾“黑屏”，切换场景时先黑一下<br>
-  <b>9.</b> 导出：写完点“复制 JSON”（粘贴发给 ZCode）或“导出 JSON”（下载文件）<br>
+  <b>9.</b> 导出：写完点“复制 JSON”（保存到剪贴板）或“导出 JSON”（下载文件）<br>
   <b>10.</b> 自动保存：写的每个字都存在你手机/电脑的浏览器里，关掉再开还在<br>
-  <span class="tip">💡 分享：把本页网址发给朋友，大家各自编各自的剧本，互不干扰。想接别人的剧本，让他把 JSON 发你，你发给我就行。</span>
+  <span class="tip">💡 分享：把本页网址发给朋友，大家各自编各自的剧本，互不干扰。</span>
 </div>
 <main>
   <div id="sceneList"></div>
@@ -462,13 +462,13 @@
       ta.style.cssText = "position:fixed;left:-9999px;top:0";
       document.body.appendChild(ta);
       ta.select();
-      try { document.execCommand("copy"); alert("✅ JSON 已复制，直接粘贴发给 ZCode 吧"); }
+      try { document.execCommand("copy"); alert("✅ JSON 已复制"); }
       catch (e) { alert("复制失败，请用旁边的“导出 JSON”下载文件"); }
       document.body.removeChild(ta);
     }
     if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard.writeText(text).then(function () {
-        alert("✅ JSON 已复制，直接粘贴发给 ZCode 吧");
+        alert("✅ JSON 已复制");
       }, fallback);
     } else {
       fallback();
