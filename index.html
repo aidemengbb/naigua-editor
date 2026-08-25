@@ -59,6 +59,7 @@
     header h1 { font-size: 15px; }
     header input { min-width: 0; padding: 10px 12px; font-size: 16px; }
     header button { padding: 11px 20px; font-size: 15px; }
+    #segSize { width: 90px; padding: 10px 8px; font-size: 15px; }
     header .hint { font-size: 11px; line-height: 1.6; }
     main { flex-direction: column; height: auto; min-height: calc(100vh - 120px); }
     #sceneList { width: 100%; display: flex; overflow-x: auto; padding: 8px; gap: 8px; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
@@ -97,6 +98,7 @@
   <input id="title" placeholder="标题（章节名/杂项故事名）">
   <input id="chapterCode" placeholder="章节码（自动生成，可改）" style="max-width:200px" title="章节码：玩家在游戏里输入这个码就能提前解锁本章节，每个章节码不能重复">
   <button class="ghost" id="btnHelp">📖 教程</button>
+  <input id="segSize" type="number" min="100" max="1000000" value="5000" style="width:100px" title="每段最多多少字符（按你粘贴的平台限制设，比如微信提示消息过长就调小）">
   <button id="btnCopy">复制 JSON</button>
   <button id="btnExport">导出 JSON</button>
   <div class="hint">左侧建场景，右侧写对白/传配图/加音频/加选项，全部自动保存。写完点“复制 JSON”或“导出 JSON”保存剧本。把本页网址发给朋友，大家都能一起编。</div>
@@ -699,9 +701,10 @@
   var segs = [], segIdx = 0;
   function handleCopy() {
     var text = buildJSON();
-    if (text.length > 700000) {   // 超过约 700KB 自动分段
+    var segLen = parseInt($("segSize").value, 10) || 5000;   // 每段字符数（可按粘贴平台限制调整）
+    if (text.length > segLen) {
       segs = []; segIdx = 0;
-      for (var i = 0; i < text.length; i += 700000) segs.push(text.slice(i, i + 700000));
+      for (var i = 0; i < text.length; i += segLen) segs.push(text.slice(i, i + segLen));
       copySeg();
       return;
     }
