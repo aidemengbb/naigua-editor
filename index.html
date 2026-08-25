@@ -199,7 +199,8 @@
       var url = URL.createObjectURL(videoFile);
       var video = document.createElement("video");
       video.src = url;
-      video.muted = true;
+      video.muted = false;
+      video.volume = 0;      // 音量0但不静音，保证音频轨道有真实声音
       video.playsInline = true;
       var cleaned = false;
       function cleanup() {
@@ -571,7 +572,9 @@
         play.textContent = "▶";
         play.disabled = !ln.audio;
         play.addEventListener("click", function () {
-          if (ln.audio) { var a = new Audio(ln.audio); a.play(); }
+          if (!ln.audio) return;
+          var a = new Audio(ln.audio);
+          a.play().catch(function () { showToast("❌ 播放失败：这个浏览器播不了这段音频"); });
         });
         var fade = document.createElement("label"); fade.className = "fade";
         var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = !!ln.fade;
