@@ -126,7 +126,6 @@
   "use strict";
 
   var LS_KEY = "naigua_editor_v1";
-  var ROLES = ["旁白", "奶蛙", "牛来", "老板", "妈妈", "小牛"];
 
   var project = {
     title: "第一章 · 小卖部",
@@ -135,6 +134,7 @@
   var sceneOrder = [];
   var currentId = null;
   var saveTimer = null;
+  var toastTimer = null;
 
   function $(id) { return document.getElementById(id); }
 
@@ -144,18 +144,21 @@
     return "scene" + n;
   }
 
-  function sceneLabel(id) {
-    var s = project.scenes[id];
-    if (!s) return id;
-    var img = s.imageName || s.imageData ? "图" : "";
-    return s.name || (img ? "未命名场景" : "未命名场景");
+  function showToast(msg) {
+    var el = $("saved");
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove("show"); }, 2200);
   }
 
   function save() {
-    localStorage.setItem(LS_KEY, JSON.stringify({ project: project, order: sceneOrder, current: currentId }));
-    var el = $("saved");
-    el.classList.add("show");
-    setTimeout(function () { el.classList.remove("show"); }, 1200);
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify({ project: project, order: sceneOrder, current: currentId }));
+      showToast("已自动保存");
+    } catch (e) {
+      showToast("⚠️ 浏览器存储满了！点“导出 JSON”先保存，再删掉一些图片/音频");
+    }
   }
   function scheduleSave() { clearTimeout(saveTimer); saveTimer = setTimeout(save, 400); }
 
@@ -166,7 +169,7 @@
         project = raw.project;
         sceneOrder = raw.order || Object.keys(project.scenes);
         currentId = raw.current || sceneOrder[0];
-        $("title").value = project.title;
+        $("title").value = project.title || "";
       }
     } catch (e) {}
     if (!sceneOrder.length) addScene();
@@ -176,7 +179,10 @@
 
   function addScene() {
     var id = newId();
-    var n = sceneOrder.length + 1;
+    var used = {};
+    sceneOrder.forEach(function (x) { used[project.scenes[x].name] = true; });
+    var n = 1;
+    while (used["图" + n]) n++;
     project.scenes[id] = { name: "图" + n, imageName: "", imageData: null, lines: [], choices: [], end: "", next: "" };
     sceneOrder.push(id);
     currentId = id;
@@ -286,6 +292,7 @@
 
     $("imgFile").addEventListener("change", function () {
       var f = this.files[0];
+      this.value = "";
       if (!f) return;
       var reader = new FileReader();
       reader.onload = function (ev) {
@@ -296,8 +303,15 @@
           var c = document.createElement("canvas");
           c.width = Math.round(img.width * scale);
           c.height = Math.round(img.height * scale);
-          c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-          s.imageData = c.toDataURL("image/jpeg", 0.72);
+          var ctx = c.getContext("2d");
+          ctx.drawImage(img, 0, 0, c.width, c.height);
+          // 检测透明：有透明就用 PNG，否则 JPEG（更小）
+          var hasAlpha = false;
+          try {
+            var d = ctx.getImageData(0, 0, c.width, c.height).data;
+            for (var i = 3; i < d.length; i += 64) { if (d[i] < 250) { hasAlpha = true; break; } }
+          } catch (e) {}
+          s.imageData = hasAlpha ? c.toDataURL("image/png") : c.toDataURL("image/jpeg", 0.72);
           s.imageName = "";
           preview.src = s.imageData;
           preview.style.display = "";
@@ -343,6 +357,7 @@
           fi.type = "file"; fi.accept = "audio/*";
           fi.addEventListener("change", function () {
             var f = fi.files[0];
+            fi.value = "";
             if (!f) return;
             var rd = new FileReader();
             rd.onload = function (ev) {
@@ -462,13 +477,13 @@
       ta.style.cssText = "position:fixed;left:-9999px;top:0";
       document.body.appendChild(ta);
       ta.select();
-      try { document.execCommand("copy"); alert("✅ JSON 已复制"); }
-      catch (e) { alert("复制失败，请用旁边的“导出 JSON”下载文件"); }
+      try { document.execCommand("copy"); showToast("✅ JSON 已复制"); }
+      catch (e) { showToast("复制失败，请用旁边的“导出 JSON”下载文件"); }
       document.body.removeChild(ta);
     }
     if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard.writeText(text).then(function () {
-        alert("✅ JSON 已复制");
+        showToast("✅ JSON 已复制");
       }, fallback);
     } else {
       fallback();
