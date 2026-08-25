@@ -109,6 +109,7 @@
   🖼 章节项目（可选）：上传一张"通关解锁壁纸"——玩家打通本章后，主界面背景就可以选这张图了。不传 = 本章没有壁纸奖励。
   <input type="file" id="wallFile" accept="image/*" style="margin-left:10px">
   <img id="wallPreview" style="height:46px;border-radius:6px;vertical-align:middle;margin-left:10px;display:none">
+  <span id="wallStatus" style="color:#2e5c33;font-size:12px;margin-left:8px"></span>
 </div>
 <div id="tutorial">
   <b>📖 使用教程（30 秒学会）</b><br>
@@ -261,7 +262,11 @@
           if (project.cover) { $("coverPreview").src = project.cover; $("coverPreview").style.display = ""; }
         } else {
           $("wallRow").style.display = "block";
-          if (project.wallpaper) { $("wallPreview").src = project.wallpaper; $("wallPreview").style.display = ""; }
+          if (project.wallpaper) {
+            $("wallPreview").src = project.wallpaper;
+            $("wallPreview").style.display = "";
+            $("wallStatus").textContent = "✓ 已添加壁纸（再点一次可替换）";
+          }
         }
       }
     } catch (e) {}
@@ -315,7 +320,10 @@
       rd.readAsDataURL(f);
     });
   }
-  attachUpload("wallFile", null, "wallPreview", function (dataUrl) { project.wallpaper = dataUrl; });
+  attachUpload("wallFile", null, "wallPreview", function (dataUrl) {
+    project.wallpaper = dataUrl;
+    $("wallStatus").textContent = "✓ 已添加壁纸（再点一次可替换）";
+  });
 
   // 杂项封面图上传
   $("coverFile").addEventListener("change", function () {
