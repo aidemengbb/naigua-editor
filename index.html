@@ -192,6 +192,16 @@
     return "scene" + n;
   }
 
+  /* dataURI → Blob（播放兼容处理共用） */
+  function dataUriToBlob(uri) {
+    var parts = uri.split(",");
+    var mime = (parts[0].match(/data:([^;]+)/) || [])[1] || "audio/mpeg";
+    var bin = atob(parts[1]);
+    var u8 = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    return new Blob([u8], { type: mime });
+  }
+
   function showToast(msg) {
     var el = $("saved");
     el.textContent = msg;
@@ -415,6 +425,7 @@
     rd.readAsDataURL(f);
   });
   var testAudio = null;
+  var testVoice = null;
   $("musicTest").addEventListener("click", function () {
     var btn = this;
     if (!project.music) { showToast("还没有添加音乐，先点上面选文件"); return; }
@@ -728,8 +739,37 @@
         play.disabled = !ln.audio;
         play.addEventListener("click", function () {
           if (!ln.audio) return;
-          var a = new Audio(ln.audio);
-          a.play().catch(function () { showToast("❌ 播放失败：这个浏览器播不了这段音频"); });
+          var btn = this;
+          if (testVoice) {
+            testVoice.pause();
+            if (testVoice._url) URL.revokeObjectURL(testVoice._url);
+            testVoice = null;
+            return;
+          }
+          btn.disabled = true;
+          btn.textContent = "⏳";
+          var getBlob = window.fetch
+            ? fetch(ln.audio).then(function (r) { return r.blob(); }).catch(function () { return dataUriToBlob(ln.audio); })
+            : Promise.resolve(dataUriToBlob(ln.audio));
+          getBlob.then(function (blob) {
+            var url = URL.createObjectURL(blob);
+            var a = new Audio(url);
+            a._url = url;
+            testVoice = a;
+            a.onended = function () { testVoice = null; URL.revokeObjectURL(url); };
+            a.onerror = function () {
+              testVoice = null; URL.revokeObjectURL(url);
+              showToast("❌ 播放失败：这段音频格式不支持");
+            };
+            return a.play();
+          }).then(function () {
+            btn.disabled = false;
+            btn.textContent = "▶";
+          }).catch(function (e) {
+            btn.disabled = false;
+            btn.textContent = "▶";
+            showToast("❌ 播放失败：" + (e && e.message ? e.message : "格式不支持"));
+          });
         });
         var fade = document.createElement("label"); fade.className = "fade";
         var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = !!ln.fade;
