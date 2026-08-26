@@ -114,6 +114,12 @@
   <img id="wallPreview" style="height:46px;border-radius:6px;vertical-align:middle;margin-left:10px;display:none">
   <span id="wallStatus" style="color:#2e5c33;font-size:12px;margin-left:8px"></span>
 </div>
+<div id="musicRow" style="display:none;background:#eef1fa;padding:10px 20px;font-size:13px;color:#2a3f6e">
+  🎵 章节项目（可选）：上传本章的背景音乐（mp3 最佳，2MB 以内）——玩家进入本章自动播放，左上角可开关。不传 = 本章用默认音乐。
+  <input type="file" id="musicFile" accept="audio/*" style="margin-left:10px">
+  <span id="musicStatus" style="color:#2a3f6e;font-size:12px;margin-left:8px"></span>
+  <button id="musicTest" style="margin-left:8px;padding:4px 10px;border:1px solid #999;border-radius:6px;background:#fff;cursor:pointer;font-size:12px">▶ 试听</button>
+</div>
 <div id="tutorial">
   <b>📖 使用教程（30 秒学会）</b><br>
   <b>1.</b> 建场景：左侧点“＋新建场景”，起名（图1、图2…）<br>
@@ -151,6 +157,7 @@
     code: "",
     cover: "",
     wallpaper: "",
+    music: "",
     scenes: {}
   };
   var sceneOrder = [];
@@ -325,10 +332,14 @@
           if (project.cover) { $("coverPreview").src = project.cover; $("coverPreview").style.display = ""; }
         } else {
           $("wallRow").style.display = "block";
+          $("musicRow").style.display = "block";
           if (project.wallpaper) {
             $("wallPreview").src = project.wallpaper;
             $("wallPreview").style.display = "";
             $("wallStatus").textContent = "✓ 已添加壁纸（再点一次可替换）";
+          }
+          if (project.music) {
+            $("musicStatus").textContent = "✓ 已添加音乐（再点一次可替换）";
           }
         }
       }
@@ -345,6 +356,7 @@
     var isExtra = project.type === "extra";
     $("coverRow").style.display = isExtra ? "block" : "none";
     $("wallRow").style.display = isExtra ? "none" : "block";
+    $("musicRow").style.display = isExtra ? "none" : "block";
     $("chapterCode").style.display = isExtra ? "none" : "";
     if (isExtra && !project.cover) $("title").value = $("title").value || "我的杂项故事";
     scheduleSave();
@@ -386,6 +398,26 @@
   attachUpload("wallFile", null, "wallPreview", function (dataUrl) {
     project.wallpaper = dataUrl;
     $("wallStatus").textContent = "✓ 已添加壁纸（再点一次可替换）";
+  });
+  // 章节音乐上传（不转码，直接存原音频）
+  $("musicFile").addEventListener("change", function () {
+    var f = this.files[0];
+    this.value = "";
+    if (!f) return;
+    if (f.size > 3 * 1024 * 1024) { showToast("⚠️ 音乐超过 3MB，建议用 2MB 以内的 mp3"); return; }
+    var rd = new FileReader();
+    rd.onload = function (ev) {
+      project.music = ev.target.result;
+      $("musicStatus").textContent = "✓ 已添加音乐（再点一次可替换）";
+      scheduleSave();
+      showToast("✅ 音乐已添加，可点“试听”检查");
+    };
+    rd.readAsDataURL(f);
+  });
+  $("musicTest").addEventListener("click", function () {
+    if (!project.music) { showToast("还没有添加音乐"); return; }
+    var a = new Audio(project.music);
+    a.play().catch(function () { showToast("❌ 播放失败"); });
   });
 
   // 杂项封面图上传
@@ -733,6 +765,7 @@
       }
       out.code = project.code;
       if (project.wallpaper) out.wallpaper = project.wallpaper;
+      if (project.music) out.music = project.music;
     }
     if (out.type === "extra") out.cover = project.cover || "";
     sceneOrder.forEach(function (id) {
