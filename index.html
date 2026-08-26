@@ -192,11 +192,26 @@
     return "scene" + n;
   }
 
-  /* dataURI → Blob（播放兼容处理共用） */
+  /* dataURI → Blob（播放兼容处理共用，容错坏数据） */
   function dataUriToBlob(uri) {
+    if (!uri) throw new Error("没有音频数据，请重新上传");
+    if (uri.indexOf("blob:") === 0) return null;   // blob 链接直接用
+    if (uri.indexOf("data:") !== 0) throw new Error("音频数据格式不对，请重新上传");
     var parts = uri.split(",");
     var mime = (parts[0].match(/data:([^;]+)/) || [])[1] || "audio/mpeg";
-    var bin = atob(parts[1]);
+    var b64 = (parts[1] || "").replace(/\s/g, "");
+    if (!b64) throw new Error("音频数据为空，请重新上传");
+    var bin;
+    try {
+      bin = atob(b64);
+    } catch (e) {
+      // 可能是 URL 编码过的 base64，再试一次
+      try {
+        bin = atob(decodeURIComponent(escape(b64)));
+      } catch (e2) {
+        throw new Error("音频数据已损坏，请重新上传");
+      }
+    }
     var u8 = new Uint8Array(bin.length);
     for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
     return new Blob([u8], { type: mime });
@@ -768,7 +783,12 @@
           }).catch(function (e) {
             btn.disabled = false;
             btn.textContent = "▶";
-            showToast("❌ 播放失败：" + (e && e.message ? e.message : "格式不支持"));
+            var msg = e && e.message ? e.message : "格式不支持";
+            if (msg.indexOf("损坏") >= 0 || msg.indexOf("请重新上传") >= 0) {
+              showToast("❌ " + msg);
+            } else {
+              showToast("❌ 播放失败：" + msg);
+            }
           });
         });
         var fade = document.createElement("label"); fade.className = "fade";
