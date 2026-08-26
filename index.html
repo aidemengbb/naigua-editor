@@ -736,7 +736,10 @@
         cb.addEventListener("change", function () { ln.fade = cb.checked; scheduleSave(); });
         fade.appendChild(cb); fade.appendChild(document.createTextNode("黑屏"));
         var del = document.createElement("span"); del.className = "del"; del.textContent = "✕";
-        del.addEventListener("click", function () { s.lines.splice(i, 1); renderLines(); scheduleSave(); });
+        del.addEventListener("click", function () {
+          if (!confirm("删除这行对白？")) return;
+          s.lines.splice(i, 1); renderLines(); scheduleSave();
+        });
         row.appendChild(sel); row.appendChild(txt); row.appendChild(up); row.appendChild(vt); row.appendChild(play); row.appendChild(fade); row.appendChild(del);
         linesBox.appendChild(row);
       });
@@ -765,7 +768,10 @@
         });
         sel.addEventListener("change", function () { c.goto = this.value; scheduleSave(); });
         var del = document.createElement("span"); del.className = "del"; del.textContent = "✕";
-        del.addEventListener("click", function () { s.choices.splice(i, 1); renderChoices(); scheduleSave(); });
+        del.addEventListener("click", function () {
+          if (!confirm("删除这个选项？")) return;
+          s.choices.splice(i, 1); renderChoices(); scheduleSave();
+        });
         row.appendChild(txt); row.appendChild(sel); row.appendChild(del);
         choicesBox.appendChild(row);
       });
