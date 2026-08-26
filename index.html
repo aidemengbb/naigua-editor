@@ -50,6 +50,20 @@
   .endrow { display: flex; align-items: center; gap: 8px; }
   .endrow input { padding: 7px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; width: 200px; }
   .endrow span { font-size: 12px; color: #8a8a80; }
+  #welcome {
+    position: fixed; inset: 0; z-index: 99; display: none;
+    align-items: center; justify-content: center; background: rgba(0,0,0,0.5);
+  }
+  #welcome.on { display: flex; }
+  .wl-box {
+    background: #fff; border-radius: 14px; padding: 26px 28px; width: 84%; max-width: 380px;
+    text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+  }
+  .wl-title { font-size: 17px; font-weight: 700; color: #3a2a10; margin-bottom: 14px; }
+  .wl-text { font-size: 14px; line-height: 2; color: #5a4a28; text-align: left; }
+  .wl-btn { margin-top: 18px; padding: 11px 40px; border: none; border-radius: 10px;
+    background: #f6c96b; color: #3a2a10; font-weight: 700; font-size: 15px; cursor: pointer; }
+
   .saved { position: fixed; bottom: 16px; right: 16px; background: #3a7d44; color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 12px; opacity: 0; transition: opacity .4s; }
   .saved.show { opacity: 1; }
 
@@ -142,6 +156,17 @@
 <datalist id="roleList">
   <option value="旁白"><option value="奶蛙"><option value="牛来"><option value="老板"><option value="妈妈"><option value="小牛">
 </datalist>
+<div id="welcome">
+  <div class="wl-box">
+    <div class="wl-title">📝 欢迎使用</div>
+    <div class="wl-text">
+      此编辑器为 GitHub 项目，依赖浏览器运行。<br>
+      若有使用问题，尝试更换浏览器。<br>
+      导出的 JSON 请发给主播，由主播负责更新游戏。
+    </div>
+    <button class="wl-btn" id="wlOk">知道了</button>
+  </div>
+</div>
 <div id="saved" class="saved">已自动保存</div>
 
 <script>
@@ -789,6 +814,10 @@
   });
   $("btnExport").addEventListener("click", exportJSON);
     $("btnHelp").addEventListener("click", function () { $("tutorial").classList.toggle("show"); });
+
+  // 进入弹窗提示（每次打开显示，点“知道了”后本次会话不再弹）
+  $("welcome").classList.add("on");
+  $("wlOk").addEventListener("click", function () { $("welcome").classList.remove("on"); });
 
   load();
 })();
