@@ -125,7 +125,7 @@
   <b>1.</b> 建场景：左侧点“＋新建场景”，起名（图1、图2…）<br>
   <b>2.</b> 配图：场景里“上传图片”（手机拍照/相册）或填已有文件名<br>
   <b>3.</b> 写对白：点“＋添加对白”，角色可点选也可自己输入（奶蛙/牛来/老板/妈妈…），每行一句，从上到下播放<br>
-  <b>4.</b> 加音频：对白行点“🎤加音频”录音/选音频，自动挂上，可试听<br>
+  <b>4.</b> 加音频：对白行点“🎤加音频”选音频文件/录音，自动挂上，可试听<br>
   <b>5.</b> 选项：一幕结尾“＋添加选项”，写文字、选跳到哪个场景（这就是分支）<br>
   <b>6.</b> 跳转：没有选项的幕，用“跳转到”指定播完去哪（做分支汇合用）<br>
   <b>7.</b> 结局：分支终点填结局名（如：帮忙·完）<br>
@@ -223,111 +223,6 @@
     el.classList.add("show");
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { el.classList.remove("show"); }, 2600);
-  }
-
-  /* 浏览器标识（用于错误反馈） */
-  function getBrowserInfo() {
-    var ua = navigator.userAgent;
-    var m = ua.match(/(Chrome|Edg|Firefox|Safari|QQBrowser|UCBrowser|MiuiBrowser|HuaweiBrowser|OPR)\/?([\d.]+)?/);
-    if (m) return (m[1] || "浏览器") + (m[2] ? " " + m[2] : "");
-    return ua.slice(0, 50);
-  }
-
-  /* WAV 编码（降级方案输出） */
-  function encodeWav(buffer) {
-    var rate = buffer.sampleRate, len = buffer.length;
-    var bytes = 44 + len * 2;
-    var ab = new ArrayBuffer(bytes);
-    var v = new DataView(ab);
-    function wstr(off, str) { for (var i = 0; i < str.length; i++) v.setUint8(off + i, str.charCodeAt(i)); }
-    wstr(0, "RIFF"); v.setUint32(4, bytes - 8, true); wstr(8, "WAVE");
-    wstr(12, "fmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
-    v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
-    wstr(36, "data"); v.setUint32(40, len * 2, true);
-    var d = buffer.getChannelData(0);
-    for (var i = 0; i < len; i++) {
-      var s = Math.max(-1, Math.min(1, d[i]));
-      v.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-    }
-    return new Blob([ab], { type: "audio/wav" });
-  }
-
-  /* 路线B（降级）：OfflineAudioContext 渲染视频音轨为 WAV，几乎所有浏览器支持 */
-  function fallbackToWav(video, cleanup, fail) {
-    try {
-      var duration = (typeof video.duration === "number" && isFinite(video.duration) && video.duration > 0) ? video.duration : 30;
-      var sampleRate = 22050;
-      var Ctx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
-      if (!Ctx) { fail("此浏览器不支持音频处理"); return; }
-      var ctx = new Ctx(1, Math.ceil(duration * sampleRate), sampleRate);
-      var src = ctx.createMediaElementSource(video);
-      src.connect(ctx.destination);
-      ctx.startRendering().then(function (buffer) {
-        cleanup();
-        resolveWav(encodeWav(buffer));
-      }).catch(function (e) {
-        cleanup();
-        fail("音频提取失败（" + (e && e.message ? e.message : e) + "）");
-      });
-    } catch (e) {
-      cleanup();
-      fail("此浏览器不支持视频转音频（" + (e && e.message ? e.message : e) + "）");
-    }
-  }
-
-  /* 视频转音频：路线A(captureStream录制) → 失败自动降级路线B(WAV渲染) */
-  var resolveWav = null;
-  function videoToAudio(videoFile, onWait) {
-    return new Promise(function (resolve, reject) {
-      resolveWav = resolve;
-      var url = URL.createObjectURL(videoFile);
-      var video = document.createElement("video");
-      video.src = url;
-      video.muted = false;
-      video.volume = 0;
-      video.playsInline = true;
-      video.preload = "auto";
-      var cleaned = false;
-      function cleanup() { if (!cleaned) { cleaned = true; URL.revokeObjectURL(url); video.src = ""; } }
-      function fail(msg) { cleanup(); reject(new Error(msg + "（" + getBrowserInfo() + "）")); }
-
-      video.onerror = function () { fail("视频打不开（格式可能不被支持）"); };
-      video.onloadedmetadata = function () {
-        var dur = video.duration;
-        if (typeof dur === "number" && isFinite(dur) && onWait) {
-          onWait(Math.ceil(dur), dur > 60);
-        }
-      };
-      video.play().then(function () {
-        // ---- 路线 A：captureStream + MediaRecorder ----
-        if (HTMLMediaElement.prototype.captureStream && window.MediaRecorder) {
-          var stream = null, tracks = null;
-          try {
-            stream = video.captureStream();
-            tracks = stream.getAudioTracks();
-          } catch (e) { /* 降级 */ }
-          if (tracks && tracks.length) {
-            var mime = "";
-            if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) mime = "audio/webm;codecs=opus";
-            else if (MediaRecorder.isTypeSupported("audio/mp4")) mime = "audio/mp4";
-            try {
-              var rec = new MediaRecorder(new MediaStream(tracks), mime ? { mimeType: mime } : undefined);
-              var chunks = [];
-              rec.ondataavailable = function (ev) { if (ev.data && ev.data.size) chunks.push(ev.data); };
-              rec.onstop = function () { cleanup(); resolve(new Blob(chunks, { type: mime || "audio/webm" })); };
-              rec.onerror = function () { fallbackToWav(video, cleanup, fail); };
-              var duration = (typeof video.duration === "number" && isFinite(video.duration)) ? video.duration * 1000 : 60000;
-              rec.start();
-              video.onended = function () { if (rec.state !== "inactive") rec.stop(); };
-              setTimeout(function () { if (rec.state !== "inactive") rec.stop(); }, duration + 2000);
-              return;
-            } catch (e) { /* 降级 */ }
-          }
-        }
-        // ---- 路线 B：WAV 渲染降级 ----
-        fallbackToWav(video, cleanup, fail);
-      }).catch(function () { fail("视频无法播放（格式可能不被支持）"); });
-    });
   }
 
   function save() {
@@ -602,7 +497,7 @@
 
     // 对白
     var sec3 = document.createElement("div"); sec3.className = "sec";
-    sec3.innerHTML = '<h3>对白（每行一句，从上到下播放。每行可挂 🎤音频 / 🎬视频转音频）</h3><div id="lines"></div><button class="addbtn" id="addLine">＋ 添加对白</button>';
+    sec3.innerHTML = '<h3>对白（每行一句，从上到下播放。每行可挂 🎤音频）</h3><div id="lines"></div><button class="addbtn" id="addLine">＋ 添加对白</button>';
     e.appendChild(sec3);
 
     // 选项
@@ -714,40 +609,6 @@
           });
           fi.click();
         });
-        var vt = document.createElement("button");
-        vt.className = "audioBtn";
-        vt.textContent = "🎬 视频转音频";
-        vt.title = "选一个视频，自动抽出声音当配音";
-        vt.addEventListener("click", function () {
-          var fi = document.createElement("input");
-          fi.type = "file"; fi.accept = "video/*";
-          fi.addEventListener("change", function () {
-            var f = fi.files[0];
-            fi.value = "";
-            if (!f) return;
-            vt.textContent = "⏳ 读取视频…";
-            vt.disabled = true;
-            videoToAudio(f, function (secs, tooLong) {
-              vt.textContent = "⏳ 转换中（约" + secs + "秒）…";
-              if (tooLong) showToast("视频超过1分钟，转换会久一些，建议用短视频");
-            }).then(function (blob) {
-              var rd = new FileReader();
-              rd.onload = function (ev) {
-                ln.audio = ev.target.result;
-                vt.textContent = "🎬 视频转音频";
-                vt.disabled = false;
-                renderLines(); scheduleSave();
-                showToast("✅ 视频音频已提取");
-              };
-              rd.readAsDataURL(blob);
-            }).catch(function (err) {
-              vt.textContent = "🎬 视频转音频";
-              vt.disabled = false;
-              showToast("❌ 转换失败：" + (err && err.message ? err.message : "浏览器不支持"));
-            });
-          });
-          fi.click();
-        });
         var play = document.createElement("button");
         play.className = "playBtn";
         play.textContent = "▶";
@@ -800,7 +661,7 @@
           if (!confirm("删除这行对白？")) return;
           s.lines.splice(i, 1); renderLines(); scheduleSave();
         });
-        row.appendChild(sel); row.appendChild(txt); row.appendChild(up); row.appendChild(vt); row.appendChild(play); row.appendChild(fade); row.appendChild(del);
+        row.appendChild(sel); row.appendChild(txt); row.appendChild(up); row.appendChild(play); row.appendChild(fade); row.appendChild(del);
         linesBox.appendChild(row);
       });
     }
