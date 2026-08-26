@@ -419,26 +419,53 @@
     var btn = this;
     if (!project.music) { showToast("还没有添加音乐，先点上面选文件"); return; }
     if (btn.disabled) return;
+    if (testAudio) {
+      // 正在播放：点击 = 停止，不重播
+      testAudio.pause();
+      if (testAudio._url) URL.revokeObjectURL(testAudio._url);
+      testAudio = null;
+      btn.textContent = "▶ 试听";
+      showToast("已停止");
+      return;
+    }
     btn.disabled = true;
     btn.textContent = "▶ 处理中…";
-    if (testAudio) { testAudio.pause(); testAudio = null; }
-    // dataURI → Blob（fetch 方式，不卡界面）→ 临时URL 播放
-    fetch(project.music).then(function (r) { return r.blob(); }).then(function (blob) {
+    // dataURI → Blob → 临时URL 播放
+    var dataUriToBlob = function () {
+      var parts = project.music.split(",");
+      var mime = (parts[0].match(/data:([^;]+)/) || [])[1] || "audio/mpeg";
+      var bin = atob(parts[1]);
+      var u8 = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+      return new Blob([u8], { type: mime });
+    };
+    var getBlob = window.fetch
+      ? fetch(project.music).then(function (r) { return r.blob(); }).catch(dataUriToBlob)
+      : Promise.resolve(dataUriToBlob());
+    getBlob.then(function (blob) {
       var url = URL.createObjectURL(blob);
       testAudio = new Audio(url);
-      testAudio.onended = function () { URL.revokeObjectURL(url); testAudio = null; };
+      testAudio._url = url;
+      testAudio.onended = function () {
+        testAudio = null;
+        URL.revokeObjectURL(url);
+        btn.textContent = "▶ 试听";
+      };
       testAudio.onerror = function () {
-        URL.revokeObjectURL(url); testAudio = null;
+        testAudio = null;
+        URL.revokeObjectURL(url);
+        btn.textContent = "▶ 试听";
         showToast("❌ 播放失败，试试 mp3 格式");
       };
       return testAudio.play();
     }).then(function () {
-      showToast("▶ 正在试听…（再点一次可停止）");
+      btn.disabled = false;
+      btn.textContent = "⏸ 暂停";   // 播放中：按钮变暂停
+      showToast("▶ 正在试听（再点一次停止）");
     }).catch(function (e) {
-      showToast("❌ 试听失败：" + (e && e.message ? e.message : "无法播放，试试 mp3 格式"));
-    }).finally(function () {
       btn.disabled = false;
       btn.textContent = "▶ 试听";
+      showToast("❌ 试听失败：" + (e && e.message ? e.message : "无法播放，试试 mp3 格式"));
     });
   });
 
