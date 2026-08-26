@@ -414,10 +414,29 @@
     };
     rd.readAsDataURL(f);
   });
+  var testAudio = null;
   $("musicTest").addEventListener("click", function () {
-    if (!project.music) { showToast("还没有添加音乐"); return; }
-    var a = new Audio(project.music);
-    a.play().catch(function () { showToast("❌ 播放失败"); });
+    if (!project.music) { showToast("还没有添加音乐，先点上面选文件"); return; }
+    try {
+      if (testAudio) { testAudio.pause(); testAudio = null; }
+      // dataURI → Blob → 临时URL（比直接播 dataURI 更稳）
+      var parts = project.music.split(",");
+      var mime = (parts[0].match(/data:([^;]+)/) || [])[1] || "audio/mpeg";
+      var bin = atob(parts[1]);
+      var u8 = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+      var url = URL.createObjectURL(new Blob([u8], { type: mime }));
+      testAudio = new Audio(url);
+      testAudio.onended = function () { URL.revokeObjectURL(url); testAudio = null; };
+      testAudio.onerror = function () { URL.revokeObjectURL(url); testAudio = null; showToast("❌ 播放失败，试试 mp3 格式"); };
+      testAudio.play().catch(function () {
+        URL.revokeObjectURL(url); testAudio = null;
+        showToast("❌ 播放失败，试试 mp3 格式");
+      });
+      showToast("▶ 试听中…");
+    } catch (e) {
+      showToast("❌ 试听失败：" + (e && e.message ? e.message : e));
+    }
   });
 
   // 杂项封面图上传
