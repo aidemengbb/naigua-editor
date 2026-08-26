@@ -324,7 +324,7 @@
     var f = this.files[0];
     this.value = "";
     if (!f) return;
-    if (f.size > 3 * 1024 * 1024) { showToast("⚠️ 音乐超过 3MB，建议用 2MB 以内的 mp3"); return; }
+    if (f.size > 3 * 1024 * 1024) { showToast("❌ 音乐超过 3MB 没存上！请用 2MB 以内的 mp3"); return; }
     var rd = new FileReader();
     rd.onload = function (ev) {
       project.music = ev.target.result;
@@ -759,6 +759,13 @@
   }
 
   function exportJSON() {
+    // 导出前检查：章节类型提示音乐/壁纸是否包含
+    if (project.type !== "extra") {
+      var m = project.music ? "含音乐 ✓" : "⚠️ 未含音乐";
+      var w = project.wallpaper ? "含壁纸 ✓" : "⚠️ 未含壁纸";
+      var c = project.code ? "含章节码 ✓" : "⚠️ 未含章节码";
+      showToast("导出检查：" + m + " | " + w + " | " + c);
+    }
     var blob = new Blob([buildJSON()], { type: "application/json" });
     var a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
